@@ -218,7 +218,7 @@ namespace AsyncSocketServer
         protected const int DEFAULT_PORT = 3915;
   
         //  We default to a 1024 Byte buffer size
-        protected const int DEFAULT_BUFFER_SIZE = 1024;
+        protected const int DEFAULT_BUFFER_SIZE = 1500;
 
         // This is the connection socket and endpoint information
         protected Socket connectionsocket;
