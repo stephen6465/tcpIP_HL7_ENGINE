@@ -26,11 +26,20 @@ public abstract class MLLPHelper
     ///
 
     ///Stringbuilder containing the message
-    public static void StripMLLPContainer(StringBuilder sb)
+    public static String StripMLLPContainer(StringBuilder sb)
     {
         // Strip the message of the MLLP container characters
-        sb.Remove(0, 1);
-        sb.Remove(sb.Length - 2, 2);
+        if (((int)sb[0] == MLLP_START_CHARACTER))
+        {
+            sb.Remove(0, 1);
+        }
+        
+        if (((int)sb[sb.Length - 2] == MLLP_FIRST_END_CHARACTER) && ((int)sb[sb.Length - 1] == MLLP_LAST_END_CHARACTER))
+        {
+            sb.Remove(sb.Length - 2, 2);
+        }
+
+        return sb.ToString();
     }
 
     /// 
@@ -64,9 +73,18 @@ public abstract class MLLPHelper
     public static string CreateMLLPMessage(string p)
     {
         StringBuilder sb = new StringBuilder(p);
-        sb.Insert(0, (char)MLLP_START_CHARACTER);
-        sb.Append((char)MLLP_FIRST_END_CHARACTER);
-        sb.Append((char)MLLP_LAST_END_CHARACTER);
+
+
+
+        if (((int)sb[0] != MLLP_START_CHARACTER))
+        {
+            sb.Insert(0, (char)MLLP_START_CHARACTER);
+        }
+        if ((int)sb[sb.Length - 2] != MLLP_FIRST_END_CHARACTER)
+        {
+            sb.Append((char)MLLP_FIRST_END_CHARACTER);
+            sb.Append((char)MLLP_LAST_END_CHARACTER);
+        }
 
         return sb.ToString();
     }

@@ -3,12 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Diagnostics;
-using System.Text;
 using System.Xml.Serialization;
 using System.Collections;
 using System.Net;
 using System.IO;
-using System.Text;
+
 
 
 namespace AsyncSocketServer

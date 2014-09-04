@@ -41,7 +41,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AckMessage.cs" />
+    <Compile Include="hl7.cs" />
+    <Compile Include="Message.cs" />
     <Compile Include="MLLP_HELP.cs" />
+    <Compile Include="OSAsyncEventStack.cs" />
+    <Compile Include="OSCore.cs" />
+    <Compile Include="OSServer.cs" />
+    <Compile Include="OSUserToken.cs" />
+    <Compile Include="OSUtil.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Settings.cs" />
