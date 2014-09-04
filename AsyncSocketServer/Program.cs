@@ -4,6 +4,7 @@ using System.Text;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.IO;
 
 
 
@@ -265,38 +266,19 @@ namespace AsyncSocketServer
         // This method peels apart the command string to create either a client or server socket,
         // which is not great because it means the method has to know the semantics of the command
         // that is passed to it.  So this needs to be fixed.
-        protected bool CreateSocket(string cmdstring)
+        protected bool CreateSocket(string iporname, int port)
         {
             exceptionthrown = false;
 
-            if (!string.IsNullOrEmpty(cmdstring))
+            if (iporname.Length > 0 && (port > 1024 && port < 65500))
             {
-                // Here is the utility function that actually parses the command string.
-                List<string> parameters = os_util.ParseParams(cmdstring);
-
-                // Based on the number of parameters in the command string, we create an IPEndPoint
-                // with the appropriate values for server and port number.
-                // Implicit in here is the fact that a server always creates on localhost, so the
-                // startserver command will contain only one parameter (port number), or none.
-                // Like I said, this needs to be refactored to be more generic
-                if (parameters.Count < 1)
-                {
-                    connectionendpoint = CreateIPEndPoint(DEFAULT_SERVER, DEFAULT_PORT);
-                }
-                else if (parameters.Count == 1)
-                {
-                    connectionendpoint = CreateIPEndPoint(DEFAULT_SERVER, Convert.ToInt32(parameters[0]));
-                }
-                else
-                {
-                    connectionendpoint = CreateIPEndPoint(parameters[0], Convert.ToInt32(parameters[1]));
-                }
+                connectionendpoint = CreateIPEndPoint(iporname, port);
             }
-            else
+             else
             {
+                //We need to log here that we went to defualts... 
                 connectionendpoint = CreateIPEndPoint(DEFAULT_SERVER, DEFAULT_PORT);
             }
-
             // If we get here, we try to create the socket using the IPEndpoint information.
             // We are defaulting here to TCP Stream sockets, but you could change this with more parameters.
             if (!exceptionthrown)
@@ -334,7 +316,7 @@ namespace AsyncSocketServer
     class OSServer : OSCore
     {
         // We limit this server client connections for test purposes
-        protected const int DEFAULT_MAX_CONNECTIONS = 10;
+        protected const int DEFAULT_MAX_CONNECTIONS = 100;
 
         // We use a Mutex to block the listener thread so that limited client connections are active
         // on the server.  If you stop the server, the mutex is released. 
@@ -351,32 +333,33 @@ namespace AsyncSocketServer
 
         
         // Default constructor
-        public OSServer()
+        public OSServer(Settings intSettings)
         {
             exceptionthrown = false;
 
             // First we set up our mutex and semaphore
             mutex = new Mutex();
             numconnections = 0;
-             
-
+       
             // Then we create our stack of read sockets
-            socketpool = new OSAsyncEventStack(DEFAULT_MAX_CONNECTIONS);
-            // Create the Mllp Helper object here
-            hl7 hl7 = new hl7();
-
-            // Now we create enough read sockets to service the maximum number of clients
+              socketpool = new OSAsyncEventStack(Convert.ToInt32(intSettings.NumConnect));
+                 // Now we create enough read sockets to service the maximum number of clients
             // that we will allow on the server
             // We also assign the event handler for IO Completed to each socket as we create it
             // and set up its buffer to the right size.
             // Then we push it onto our stack to wait for a client connection
-            for (Int32 i = 0; i < DEFAULT_MAX_CONNECTIONS; i++)
-            {
-                SocketAsyncEventArgs item = new SocketAsyncEventArgs();
-                item.Completed += new EventHandler<SocketAsyncEventArgs>(OnIOCompleted);
-                item.SetBuffer(new Byte[DEFAULT_BUFFER_SIZE], 0, DEFAULT_BUFFER_SIZE);
-                socketpool.Push(item);
-            }
+                for (Int32 i = 0; i < Convert.ToInt32(intSettings.NumConnect); i++)
+                {
+                    SocketAsyncEventArgs item = new SocketAsyncEventArgs();
+                    item.Completed += new EventHandler<SocketAsyncEventArgs>(OnIOCompleted);
+                    item.SetBuffer(new Byte[Convert.ToInt32(intSettings.BufferSize)], 0, Convert.ToInt32(intSettings.BufferSize));
+                    socketpool.Push(item);
+                }
+      
+                // Create the Mllp Helper object here
+            hl7 hl7 = new hl7();
+
+           
         }
 
 
@@ -397,12 +380,12 @@ namespace AsyncSocketServer
 
 
         // We call this method once to start the server if it is not started
-        public bool Start(string cmdstring)
+        public bool Start(Settings cmdstring)
         {
             exceptionthrown = false;
 
             // First create a generic socket
-            if(CreateSocket(cmdstring))
+            if(CreateSocket(cmdstring.LocalIPAddress, Convert.ToInt32(cmdstring.LocalPort)))
             {
                 try
                 {
@@ -410,7 +393,7 @@ namespace AsyncSocketServer
                     connectionsocket.Bind(connectionendpoint);
 
                     // Now start listening on the listener socket and wait for asynchronous client connections
-                    connectionsocket.Listen(DEFAULT_MAX_CONNECTIONS);
+                    connectionsocket.Listen(Convert.ToInt32(cmdstring.NumConnect));
                     StartAcceptAsync(null);
                     mutex.WaitOne();
                     return true;
@@ -728,60 +711,72 @@ namespace AsyncSocketServer
             
             os_util = new OSUtil();
 
-            // This is a loop to get commands from the user and execute them
-            while (!shutdown)
-            {
-                string userinput = Console.ReadLine();
+                 //Intialize your settings and settings file
+            Settings intSettings = new Settings();
+            
+            String path = Directory.GetCurrentDirectory();
+            String setFile = @"\settings.xml";
+            String ComPath = path + setFile;
+            
+            //Check for config file and if it doesn't exist then create it
 
-                if (!string.IsNullOrEmpty(userinput))
+            if (File.Exists(ComPath)){
+                Settings intSet = intSettings.Deserialize(ComPath);
+                intSettings = intSet;
+            }else{
+                //Might want to end here or do something with no config
+                    intSettings.Serialize(ComPath, intSettings);
+                // to shut down just call os_server.Stop();
+            }
+
+
+            os_server = new OSServer(intSettings);
+            
+            
+
+
+                bool started = os_server.Start(intSettings);
+                if (!started)
                 {
-                    switch(os_util.ParseCommand(userinput))
+                    Console.WriteLine("Failed to Start Server.");
+                    Console.WriteLine(os_server.GetLastError());
+                }
+                else
+                {
+                    Console.WriteLine("Server started successfully.");
+                    serverstarted = true;
+                }
+
+                while (!shutdown)
+                {
+                    string userinput = Console.ReadLine();
+
+                    if (!string.IsNullOrEmpty(userinput))
                     {
-                        case OSUtil.os_cmd.OS_EXIT:
-                            {
-                                if (serverstarted)
+                        switch (os_util.ParseCommand(userinput))
+                        {
+                            case OSUtil.os_cmd.OS_EXIT:
                                 {
-                                    os_server.Stop();
-                                }
-                                shutdown = true;
-                                break;
-                            }
-                        case OSUtil.os_cmd.OS_STARTSERVER:
-                            {
-                                if (!serverstarted)
-                                {
-                                    os_server = new OSServer();
-                                    bool started = os_server.Start(userinput);
-                                    if (!started)
+                                    if (serverstarted)
                                     {
-                                        Console.WriteLine("Failed to Start Server.");
-                                        Console.WriteLine(os_server.GetLastError());
+                                        os_server.Stop();
                                     }
-                                    else
-                                    {
-                                        Console.WriteLine("Server started successfully.");
-                                        serverstarted = true;
-                                    }
+                                    shutdown = true;
+                                    break;
                                 }
-                                else
+                            case OSUtil.os_cmd.OS_HELP:
                                 {
-                                    Console.WriteLine("Server is already running.");
+                                    Console.WriteLine("Available Commands:");
+                                    Console.WriteLine("exit = Stop the server and quit the program");
+                                    break;
                                 }
-                                break;
-                            }
-                       case OSUtil.os_cmd.OS_HELP:
-                            {
-                                Console.WriteLine("Available Commands:");
-                                Console.WriteLine("startserver <port> = Start the OS Server (Limit 1 per box)");
-                                Console.WriteLine("connect <server> <port> = Connect the client to the OS Server");
-                                Console.WriteLine("disconnect = Disconnect from the OS Server");
-                                Console.WriteLine("send <message> = Send a message to the OS Server");
-                                Console.WriteLine("exit = Stop the server and quit the program");
-                                break;
-                            }
+             
+                        }
+
                     }
                 }
-            }
+
+           
         }
     }
 }
