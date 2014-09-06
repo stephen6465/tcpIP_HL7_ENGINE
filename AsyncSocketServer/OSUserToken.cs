@@ -35,6 +35,7 @@ namespace AsyncSocketServer
         {
             ownersocket = readSocket;
             stringbuilder = new StringBuilder(bufferSize);
+            
         }
 
         // This allows us to refer to the socket that created this token's read socket
@@ -85,6 +86,17 @@ namespace AsyncSocketServer
                     totalbytecount = 0;
                     stringbuilder.Length = 0;
                     Console.WriteLine("Received: \"{0}\". The server has read {1} bytes. {2}", received, received.Length, temp2);
+
+                    Message m = new Message(received);
+
+                    AckMessage ack = new AckMessage(received);
+
+                    Console.WriteLine(ack.ack);
+
+                    Byte[] sendBuffer = Encoding.ASCII.GetBytes(ack.ack);
+                    args.SetBuffer(sendBuffer, 0, sendBuffer.Length);
+                    this.OwnerSocket.Send(args.Buffer);
+
                 }
 
             }
@@ -99,8 +111,8 @@ namespace AsyncSocketServer
 
 
             //TODO: Load up a send buffer to send an ack back to the calling client
-            //Byte[] sendBuffer = Encoding.ASCII.GetBytes(received);
-            //args.SetBuffer(sendBuffer, 0, sendBuffer.Length);
+           
+            //
 
             // Clear StringBuffer, so it can receive more data from the client.
 

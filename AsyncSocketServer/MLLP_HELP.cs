@@ -23,7 +23,7 @@ public abstract class MLLPHelper
     public static String StripMLLPContainer(StringBuilder sb)
     {
         // Strip the message of the MLLP container characters
-        if (((int)sb[0] != MLLP_START_CHARACTER))
+        if (((int)sb[0] == MLLP_START_CHARACTER))
         {
             sb.Remove(0, 1);
         }

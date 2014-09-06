@@ -73,13 +73,13 @@ namespace AsyncSocketServer
 
             foreach (String item in t)
             {
-                c++;
+                
 
                 if (c == SeqNum)
                 {
                     return item;
                 }
-
+                c++;
             }
 
             return "";
@@ -92,37 +92,37 @@ namespace AsyncSocketServer
             int c = 0;
             foreach (String item in t)
             {
-                c++;
+              
 
                 if (c == FieldNum)
                 {
                     return item;
                 }
-
+                c++;
             }
 
             return "";
         }
-        public String getSegments(String J, String segmentWanted)
+        public String getSegments(String message, String segmentWanted)
         {
 
-            StringBuilder t = new StringBuilder(J);
+            StringBuilder t = new StringBuilder(message);
 
             hl7 hl7 = new hl7();
-            J = hl7.StripMLLPContainer(t);
+            message = hl7.StripMLLPContainer(t);
 
             int cnt = 0;
-            foreach (char c in J)
+            foreach (char c in message)
             {
                 if (c == (char)13) cnt++;
             }
 
             segmentWanted = segmentWanted.ToUpper().Trim() + "|";
 
-            String[] Segments = J.Split((char)13);
+            String[] Segments = message.Split((char)13);
             foreach (String item in Segments)
             {
-                if (item.IndexOf(segmentWanted) > 0)
+                if (item.IndexOf(segmentWanted) > -1)
                 {
                     return item;
                 }
