@@ -97,6 +97,7 @@ namespace AsyncSocketServer
                         w.IncludeSubdirectories = false;
                         // Enable the component to begin watching for changes.
                         w.EnableRaisingEvents = true;
+                        
                         w.Changed += new System.IO.FileSystemEventHandler(os_client.myFileWatcher_ChangeDetecter);
                         w.Created += new System.IO.FileSystemEventHandler(os_client.myFileWatcher_ChangeDetecter);
                         watchers.Add(w);

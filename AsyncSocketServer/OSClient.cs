@@ -15,6 +15,10 @@ namespace AsyncSocketServer
     class OSClient : OSCore
     {
 
+        public List<Message> MessagesOut = new List<Message>();
+        // put a config file object here maybe... This way we can reconnect if not connected... put on a timer to check. and reconnect. put  a heart beat here somewhere and ack processor. 
+
+
         // This method is used to send a message to the server
         public bool Send(string cmdstring)
         {
@@ -35,6 +39,7 @@ namespace AsyncSocketServer
                     {
                         byte[] byData = System.Text.Encoding.ASCII.GetBytes(cmdstring);
                         connectionsocket.Send(byData);
+                       // connectionsocket.Receive()
                         return true;
                     }
                     else
@@ -63,10 +68,18 @@ namespace AsyncSocketServer
            using(StreamReader newMsg = new StreamReader(e.FullPath))
             {
                 String msg = newMsg.ReadToEnd();
-                
-               this.Send(msg);
+
+                if (this.Send(msg)) {
+                    //test = msg;
+                    Message m = new Message(msg);
+
+                    // an accumulator of messages leaving. 
+                    this.MessagesOut.Add(m);
+
+                }; // put lots of error handling in this skimp function
+
              }
-            
+           // put error code here.
         }
 
 
@@ -95,11 +108,9 @@ namespace AsyncSocketServer
             {
                 try
                 {
-                   
                         var connectendpoint = CreateIPEndPoint(iporname, port);
                         connectionsocket.Connect(connectionendpoint);
                         return true;
-                   
                 }
                 catch (Exception ex)
                 {
