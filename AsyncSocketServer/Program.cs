@@ -71,7 +71,7 @@ namespace AsyncSocketServer
 
             if (intSettings.Type.ToString().ToUpper().Trim() == "CLIENT")
             {
-               OSClient os_client = new OSClient();
+               OSClient os_client = new OSClient(intSettings);
 
                bool connected = os_client.Connect(intSettings.RemoteIPAddress, Convert.ToInt32(intSettings.RemotePort));
                if (!connected)

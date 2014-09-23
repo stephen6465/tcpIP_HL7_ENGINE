@@ -214,6 +214,57 @@ namespace AsyncSocketServer
         }
 
 
+        public void ProcessData(SocketAsyncEventArgs args)
+        {
+            // Get the last message received from the client, which has been stored in the stringbuilder.
+            String received = stringbuilder.ToString();
+
+            //TODO Use message received to perform a specific operation.
+
+
+            string content2 = new String((char)hl7.MLLP_FIRST_END_CHARACTER, 1);
+            content2 = content2 + new String((char)hl7.MLLP_LAST_END_CHARACTER, 1);
+
+
+
+            // get the message up to the eof characters
+            // and remove the message from the string builder
+            if (received.IndexOf(content2) > -1)
+            {
+                if (received.IndexOf(content2) == 0)
+                {
+
+                    totalbytecount = 0;
+                    stringbuilder.Length = 0;
+                    Console.WriteLine("HERE CLEARING THINGS OUT");
+                }
+                else
+                {
+
+                    //int temp = received.IndexOf(content2);
+                    int temp2 = received.IndexOf(content2);
+                    totalbytecount = totalbytecount - received.Length;
+                    received = received.Substring(1, temp2);  //Might need + 2 here to get the full message
+
+                    stringbuilder.Remove(0, temp2);
+                    totalbytecount = 0;
+                    stringbuilder.Length = 0;
+                    Console.WriteLine("Received: \"{0}\". The server has read {1} bytes. {2}", received, received.Length, temp2);
+
+                    Message m = new Message(received);
+
+                    AckMessage ack = new AckMessage(received);
+
+                    Console.WriteLine(ack.ack);
+
+                    Byte[] sendBuffer = Encoding.ASCII.GetBytes(ack.ack);
+                    args.SetBuffer(sendBuffer, 0, sendBuffer.Length);
+                    this.OwnerSocket.Send(args.Buffer);
+
+                }
+
+            }
+
         // This method processes the read socket once it has a transaction
         private void ProcessReceive(SocketAsyncEventArgs readSocket)
         {
@@ -233,6 +284,7 @@ namespace AsyncSocketServer
                         if (readsocket.Available == 0)
                         {
                             token.ProcessData(readSocket);
+                            
                         }
 
                         // Start another receive request and immediately check to see if the receive is already complete
